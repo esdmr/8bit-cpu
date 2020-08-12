@@ -1,0 +1,77 @@
+# Instruction relative offset
+# ~+1
+# ~-2
+
+# x = x + y
+	add
+# x = x - y
+	sub
+# x = -x
+	tnx
+# x = x << y
+	shl
+# x = x >> y
+	shr
+# x = x >>> y
+	asr
+# x = x & y
+	and
+# x = x ^ y
+	eor
+# x = x | y
+	ior
+# x = ~x
+	ntx
+# x = x && y: bool x,y
+	and
+# x = x || y: bool x,y
+	ior
+# x = !x: bool x
+	ntx
+# x = x == y
+	cxy
+	beq ~+3
+	lzx
+	jmp ~+2
+    lox
+# x = x != y
+	cxy
+	bnq ~+3
+	lzx
+	jmp ~+2
+	lox
+# x = x > y
+	cyx
+	bmi ~+3
+	lzx
+	jmp ~+2
+	lox
+# x = x < y
+	cxy
+	bmi ~+3
+	lzx
+	jmp ~+2
+	lox
+# x = x <= y
+	cyx
+	bpl ~+3
+	lzx
+	jmp ~+2
+	lox
+# x = x >= y
+	cxy
+	bpl ~+3
+	lzx
+	jmp ~+2
+	lox
+# ++x
+	inx
+# --x
+	dcx
+# x = *x
+	lxx
+# x = cmp ? a : y
+	bne ~+3
+	tax
+	jmp ~+2
+ne: tyx
