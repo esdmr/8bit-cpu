@@ -1,0 +1,22 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "rimraf build",
+    "build": "npm run build:src && npm run build:jison",
+    "build:src": "tsc -p .",
+    "build:jison": "jison src/bpp.y src/bpp.l -o build/bpp.cjs -m commonjs",
+    "watch:src": "tsc -w -p .",
+    "prepare": "npm run clean && npm run build"
+  },
+  "author": "Saeed M Rad",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^14.0.14",
+    "rimraf": "^3.0.2",
+    "typescript": "^3.9.5"
+  },
+  "dependencies": {
+    "jison": "^0.4.18"
+  }
+}

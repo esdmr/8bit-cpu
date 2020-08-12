@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "allowJs": true,
+    "charset": "utf8",
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "classic",
+    "newLine": "lf",
+    "outDir": "build",
+    "pretty": true,
+    "experimentalDecorators": true,
+    "removeComments": true,
+    "rootDir": "src",
+    "sourceMap": true,
+    "declaration": true,
+    "strict": true,
+    "target": "es2018",
+    "lib": [
+      "ES2020.String"
+    ]
+  },
+  "include": [
+    "src"
+  ]
+}
