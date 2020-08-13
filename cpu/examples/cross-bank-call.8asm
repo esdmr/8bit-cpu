@@ -1,0 +1,33 @@
+bank 0:
+func1:
+	; Call func3 from here
+	lda #1
+	ldb 1:func3
+	jsr func2
+	hlt
+
+
+bank 1:
+func3:
+	lda #123
+	rts
+
+
+bank swap:
+	bnk #0
+	jmp 0:func1
+func2:
+	; Allow to call any function from current bank to any bank.
+	; As long as all the functions follow standard ABI, it'll be fine.
+	tax
+	tpa
+	pha
+	txa
+	tap
+	jsr func2_cont
+	plb
+	tbp
+	rts
+
+func2_cont:
+	jpb
