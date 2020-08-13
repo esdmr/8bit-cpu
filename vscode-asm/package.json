@@ -4,6 +4,7 @@
     "displayName": "8bit Assembly",
     "description": "Assembly support for my 8bit cpu (with bank support)",
     "version": "0.0.1",
+    "author": "esdmr",
     "engines": {
         "vscode": "^1.47.0"
     },
