@@ -13,7 +13,7 @@
 		"keywords": {
 			"patterns": [{
 				"name": "keyword.control.asm8",
-				"match": "\\b(if|while|for|return)\\b"
+                "match": "(?i)\\b(hlt|nop|bnk|dbg|jmp|jsr|rts|adc|sbc|nt[xy]|ro[lr]|r[lr]c|sh[lr]|eor|add|sub|jp[abxy]|and|ior|tn[xy]|asr|bpl|bcv|bcc|beq|cl[nvcz]|bmi|bvs|bcs|bnq|se[nvcz]|in[zbxy]|ph[abxy]|ld[abxy]|lz[abxy]|dc[abxy]|pl[abxy]|st[abxy]|lo[abxy]|ts[ab]|tp[ab]|t[ab]s|t[ab]p|cp[abxy]|t[abxy][abxy]|l[abxy][abxy]|c[abxy][abxy]|s[abxy][abxy])\\b"
 			}]
 		},
 		"strings": {
