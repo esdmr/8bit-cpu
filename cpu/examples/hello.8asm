@@ -1,0 +1,24 @@
+bank swap:
+main:
+	lda __hello
+	ldx #$f0
+
+_main_loop:
+	lba
+	cpb 0
+	beq _main_end
+	sxb
+	ina
+	inx
+	jmp _main_loop
+
+_main_end:
+	dbg
+	hlt
+
+__hello:
+	.char "Hello, World!"
+	.char 0 ; Part of the string, not the fill below.
+	.fillend 0
+
+; 30B
