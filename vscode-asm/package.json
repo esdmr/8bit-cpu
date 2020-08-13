@@ -1,0 +1,26 @@
+{
+    "private": true,
+    "name": "8bit-asm",
+    "displayName": "8bit Assembly",
+    "description": "Assembly support for my 8bit cpu (with bank support)",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.47.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "asm8",
+            "aliases": ["8bit Assembly", "asm8"],
+            "extensions": [".8asm",".asm8"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "asm8",
+            "scopeName": "source.asm8",
+            "path": "./syntaxes/asm8.tmLanguage.json"
+        }]
+    }
+}
