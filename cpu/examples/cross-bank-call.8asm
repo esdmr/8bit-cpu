@@ -2,7 +2,7 @@ bank 0:
 func1:
 	; Call func3 from here
 	lda #1
-	ldb 1:func3
+	ldb #1:func3
 	jsr func2
 	hlt
 

@@ -1,24 +1,41 @@
-bank swap:
-main:
-	lda __hello
-	ldx #$f0
-
-_main_loop:
-	lba
-	cpb 0
-	beq _main_end
-	sxb
-	ina
-	inx
-	jmp _main_loop
-
-_main_end:
-	dbg
-	hlt
-
+bank 0:
 __hello:
 	.char "Hello, World!"
-	.char 0 ; Part of the string, not the fill below.
-	.fillend 0
+	.fill $7e '.'
+	.char #0 ; Part of the string, not the fill below.
 
-; 30B
+bank swap:
+main:
+	bnk #0
+	lda #0:__hello
+	ldb #$f0
+	lxa
+
+_main_while1:
+	cpx #0
+	beq _main_2
+	cpb #0
+	bnq _main_while1_if1_end
+	ldb #$f0
+	dbg
+
+_main_while1_if1_end:
+	sbx
+	ina
+	inb
+	lxa
+	jmp _main_while1
+
+_main_2:
+	ldy #0
+
+_main_while3:
+	cpb #0
+	beq _main_4
+	sby
+	inb
+	jmp _main_while3
+
+_main_4:
+	dbg
+	hlt
