@@ -189,14 +189,15 @@ function outputBin (output: {[x in number | 'swap']: {bank: number[]}}) {
 		}
 	});
 
-	cpu.start().then(() => {
-		if (argv[4] === '--debug')
-			console.log(inspect(cpu, {
-				colors: true,
-				depth: Infinity,
-				maxArrayLength: Infinity,
-			}))
-	}, console.error);
+	cpu.start();
+
+	if (argv[4] === '--debug') {
+		console.log(inspect(cpu, {
+			colors: true,
+			depth: Infinity,
+			maxArrayLength: Infinity,
+		}));
+	}
 }
 
 const require = createRequire(import.meta.url);
