@@ -19,7 +19,7 @@ enum Flag {
 }
 
 enum Register { A, B, X, Y, IP, SP, BP, FLG }
-type Instruction = (this: CPU) => void | Promise<void>;
+type Instruction = (this: CPU) => void;
 
 export interface CPU {
 	a: number;
@@ -56,27 +56,30 @@ export class CPU {
 			const func = descriptor.value;
 			if (func == null) throw new TypeError('Cannot wrap null or undefined.');
 
-			const value = async function wrapped (this: CPU) {
+			descriptor.value = function wrapped (this: CPU) {
 				const ip = this.ip;
-				if (size > 1) this.cache[1] = await this.readByte(ip + 1);
+				if (size > 1) this.cache[1] = this.readByte(ip + 1);
 				this.ip = ip + size;
 				return func.call(this);
-			} as T & { targetInstruction: string };
-			value.targetInstruction = _p;
+			} as T;
 
-			descriptor.value = value;
+			// Rename function for debugging purposes.
+			Object.defineProperty(descriptor.value, 'name', {
+				value: _p,
+			});
+
 			return descriptor;
 		};
 	}
 
-	async start () {
+	start () {
 		if (this.terminated) this.reset();
 
 		while (!this.terminated) {
-			this.cache[0] = await this.readByte(this.ip);
+			this.cache[0] = this.readByte(this.ip);
 			const instruction = this[this.cache[0]] ?? this[0];
 
-			await instruction.call(this);
+			instruction.call(this);
 		}
 	}
 
@@ -105,9 +108,8 @@ export class CPU {
 			writeBit(this.registers[Register.FLG], flag, value ? flag : 0);
 	}
 
-	async readByte (offset: number) {
+	readByte (offset: number) {
 		offset = uint8(offset);
-		await this.waitCycles();
 
 		if (offset < 128) {
 			return this.banks[this.bp]?.[offset] ?? 0;
@@ -116,9 +118,8 @@ export class CPU {
 		}
 	}
 
-	async writeByte (offset: number, value: number) {
+	writeByte (offset: number, value: number) {
 		offset = uint8(offset);
-		await this.waitCycles();
 
 		if (offset < 128) {
 			const bp = this.bp;
@@ -127,11 +128,6 @@ export class CPU {
 		} else {
 			this.unbankedMemory[offset - 128] = value;
 		}
-	}
-
-	waitCycles (cycles = 1) {
-		// 1ms * cycles delay.
-		return new Promise<undefined>((resolve) => setTimeout(() => resolve(), cycles));
 	}
 
 	private addCarry (y = this.y) {
@@ -182,16 +178,16 @@ export class CPU {
 		this.x = (x >> this.y % 8) | (x & 128);
 	}
 
-	private async push (value: number) {
-		await this.writeByte(this.sp--, value);
+	private push (value: number) {
+		this.writeByte(this.sp--, value);
 	}
 
-	private async pop () {
-		return await this.readByte(++this.sp);
+	private pop () {
+		return this.readByte(++this.sp);
 	}
 
-	private async jumpSubroutine () {
-		await this.push(this.ip);
+	private jumpSubroutine () {
+		this.push(this.ip);
 		this.ip = this.cache[1];
 	}
 
@@ -206,8 +202,8 @@ export class CPU {
 	@CPU.instruction(2) [0x02] () { this.bp = this.cache[1]; }
 	@CPU.instruction(1) [0x03] () { console.log(String.fromCharCode(...this.output)); }
 	@CPU.instruction(2) [0x04] () { this.ip = this.cache[1]; }
-	@CPU.instruction(2) async [0x05] () { await this.jumpSubroutine(); }
-	@CPU.instruction(1) async [0x06] () { this.ip = await this.pop(); }
+	@CPU.instruction(2) [0x05] () { this.jumpSubroutine(); }
+	@CPU.instruction(1) [0x06] () { this.ip = this.pop(); }
 	@CPU.instruction(1) [0x08] () { this.addCarry(); }
 	@CPU.instruction(1) [0x09] () { this.addCarry(twosNot(this.y)); }
 	@CPU.instruction(1) [0x0a] () { this.x = onesNot(this.x); }
@@ -250,14 +246,14 @@ export class CPU {
 	@CPU.instruction(1) [0x81] () { this.b++; }
 	@CPU.instruction(1) [0x82] () { this.x++; }
 	@CPU.instruction(1) [0x83] () { this.y++; }
-	@CPU.instruction(1) async [0x84] () { await this.push(this.a); }
-	@CPU.instruction(1) async [0x85] () { await this.push(this.b); }
-	@CPU.instruction(1) async [0x86] () { await this.push(this.x); }
-	@CPU.instruction(1) async [0x87] () { await this.push(this.y); }
-	@CPU.instruction(2) async [0x88] () { this.a = await this.readByte(this.cache[1]); }
-	@CPU.instruction(2) async [0x89] () { this.b = await this.readByte(this.cache[1]); }
-	@CPU.instruction(2) async [0x8a] () { this.x = await this.readByte(this.cache[1]); }
-	@CPU.instruction(2) async [0x8b] () { this.y = await this.readByte(this.cache[1]); }
+	@CPU.instruction(1) [0x84] () { this.push(this.a); }
+	@CPU.instruction(1) [0x85] () { this.push(this.b); }
+	@CPU.instruction(1) [0x86] () { this.push(this.x); }
+	@CPU.instruction(1) [0x87] () { this.push(this.y); }
+	@CPU.instruction(2) [0x88] () { this.a = this.readByte(this.cache[1]); }
+	@CPU.instruction(2) [0x89] () { this.b = this.readByte(this.cache[1]); }
+	@CPU.instruction(2) [0x8a] () { this.x = this.readByte(this.cache[1]); }
+	@CPU.instruction(2) [0x8b] () { this.y = this.readByte(this.cache[1]); }
 	@CPU.instruction(1) [0x8c] () { this.a = 0; }
 	@CPU.instruction(1) [0x8d] () { this.b = 0; }
 	@CPU.instruction(1) [0x8e] () { this.x = 0; }
@@ -266,14 +262,14 @@ export class CPU {
 	@CPU.instruction(1) [0x91] () { this.b--; }
 	@CPU.instruction(1) [0x92] () { this.x--; }
 	@CPU.instruction(1) [0x93] () { this.y--; }
-	@CPU.instruction(1) async [0x94] () { this.a = await this.pop(); }
-	@CPU.instruction(1) async [0x95] () { this.b = await this.pop(); }
-	@CPU.instruction(1) async [0x96] () { this.x = await this.pop(); }
-	@CPU.instruction(1) async [0x97] () { this.y = await this.pop(); }
-	@CPU.instruction(2) async [0x98] () { await this.writeByte(this.cache[1], this.a); }
-	@CPU.instruction(2) async [0x99] () { await this.writeByte(this.cache[1], this.b); }
-	@CPU.instruction(2) async [0x9a] () { await this.writeByte(this.cache[1], this.x); }
-	@CPU.instruction(2) async [0x9b] () { await this.writeByte(this.cache[1], this.y); }
+	@CPU.instruction(1) [0x94] () { this.a = this.pop(); }
+	@CPU.instruction(1) [0x95] () { this.b = this.pop(); }
+	@CPU.instruction(1) [0x96] () { this.x = this.pop(); }
+	@CPU.instruction(1) [0x97] () { this.y = this.pop(); }
+	@CPU.instruction(2) [0x98] () { this.writeByte(this.cache[1], this.a); }
+	@CPU.instruction(2) [0x99] () { this.writeByte(this.cache[1], this.b); }
+	@CPU.instruction(2) [0x9a] () { this.writeByte(this.cache[1], this.x); }
+	@CPU.instruction(2) [0x9b] () { this.writeByte(this.cache[1], this.y); }
 	@CPU.instruction(1) [0x9c] () { this.a = 255; }
 	@CPU.instruction(1) [0x9d] () { this.b = 255; }
 	@CPU.instruction(1) [0x9e] () { this.x = 255; }
@@ -298,66 +294,66 @@ export class CPU {
 	@CPU.instruction(1) [0xc1] () { this.a = this.b; }
 	@CPU.instruction(1) [0xc2] () { this.a = this.x; }
 	@CPU.instruction(1) [0xc3] () { this.a = this.y; }
-	@CPU.instruction(1) async [0xc4] () { this.a = await this.readByte(this.a); }
-	@CPU.instruction(1) async [0xc5] () { this.a = await this.readByte(this.b); }
-	@CPU.instruction(1) async [0xc6] () { this.a = await this.readByte(this.x); }
-	@CPU.instruction(1) async [0xc7] () { this.a = await this.readByte(this.y); }
+	@CPU.instruction(1) [0xc4] () { this.a = this.readByte(this.a); }
+	@CPU.instruction(1) [0xc5] () { this.a = this.readByte(this.b); }
+	@CPU.instruction(1) [0xc6] () { this.a = this.readByte(this.x); }
+	@CPU.instruction(1) [0xc7] () { this.a = this.readByte(this.y); }
 	@CPU.instruction(1) [0xc8] () { this.compare(this.a, this.a); }
 	@CPU.instruction(1) [0xc9] () { this.compare(this.a, this.b); }
 	@CPU.instruction(1) [0xca] () { this.compare(this.a, this.x); }
 	@CPU.instruction(1) [0xcb] () { this.compare(this.a, this.y); }
-	@CPU.instruction(1) async [0xcc] () { await this.writeByte(this.a, this.a); }
-	@CPU.instruction(1) async [0xcd] () { await this.writeByte(this.a, this.b); }
-	@CPU.instruction(1) async [0xce] () { await this.writeByte(this.a, this.x); }
-	@CPU.instruction(1) async [0xcf] () { await this.writeByte(this.a, this.y); }
+	@CPU.instruction(1) [0xcc] () { this.writeByte(this.a, this.a); }
+	@CPU.instruction(1) [0xcd] () { this.writeByte(this.a, this.b); }
+	@CPU.instruction(1) [0xce] () { this.writeByte(this.a, this.x); }
+	@CPU.instruction(1) [0xcf] () { this.writeByte(this.a, this.y); }
 	@CPU.instruction(1) [0xd0] () { this.b = this.a; }
 	@CPU.instruction(1) [0xd1] () { this.b = this.b; }
 	@CPU.instruction(1) [0xd2] () { this.b = this.x; }
 	@CPU.instruction(1) [0xd3] () { this.b = this.y; }
-	@CPU.instruction(1) async [0xd4] () { this.b = await this.readByte(this.a); }
-	@CPU.instruction(1) async [0xd5] () { this.b = await this.readByte(this.b); }
-	@CPU.instruction(1) async [0xd6] () { this.b = await this.readByte(this.x); }
-	@CPU.instruction(1) async [0xd7] () { this.b = await this.readByte(this.y); }
+	@CPU.instruction(1) [0xd4] () { this.b = this.readByte(this.a); }
+	@CPU.instruction(1) [0xd5] () { this.b = this.readByte(this.b); }
+	@CPU.instruction(1) [0xd6] () { this.b = this.readByte(this.x); }
+	@CPU.instruction(1) [0xd7] () { this.b = this.readByte(this.y); }
 	@CPU.instruction(1) [0xd8] () { this.compare(this.b, this.a); }
 	@CPU.instruction(1) [0xd9] () { this.compare(this.b, this.b); }
 	@CPU.instruction(1) [0xda] () { this.compare(this.b, this.x); }
 	@CPU.instruction(1) [0xdb] () { this.compare(this.b, this.y); }
-	@CPU.instruction(1) async [0xdc] () { await this.writeByte(this.b, this.a); }
-	@CPU.instruction(1) async [0xdd] () { await this.writeByte(this.b, this.b); }
-	@CPU.instruction(1) async [0xde] () { await this.writeByte(this.b, this.x); }
-	@CPU.instruction(1) async [0xdf] () { await this.writeByte(this.b, this.y); }
+	@CPU.instruction(1) [0xdc] () { this.writeByte(this.b, this.a); }
+	@CPU.instruction(1) [0xdd] () { this.writeByte(this.b, this.b); }
+	@CPU.instruction(1) [0xde] () { this.writeByte(this.b, this.x); }
+	@CPU.instruction(1) [0xdf] () { this.writeByte(this.b, this.y); }
 	@CPU.instruction(1) [0xe0] () { this.x = this.a; }
 	@CPU.instruction(1) [0xe1] () { this.x = this.b; }
 	@CPU.instruction(1) [0xe2] () { this.x = this.x; }
 	@CPU.instruction(1) [0xe3] () { this.x = this.y; }
-	@CPU.instruction(1) async [0xe4] () { this.x = await this.readByte(this.a); }
-	@CPU.instruction(1) async [0xe5] () { this.x = await this.readByte(this.b); }
-	@CPU.instruction(1) async [0xe6] () { this.x = await this.readByte(this.x); }
-	@CPU.instruction(1) async [0xe7] () { this.x = await this.readByte(this.y); }
+	@CPU.instruction(1) [0xe4] () { this.x = this.readByte(this.a); }
+	@CPU.instruction(1) [0xe5] () { this.x = this.readByte(this.b); }
+	@CPU.instruction(1) [0xe6] () { this.x = this.readByte(this.x); }
+	@CPU.instruction(1) [0xe7] () { this.x = this.readByte(this.y); }
 	@CPU.instruction(1) [0xe8] () { this.compare(this.x, this.a); }
 	@CPU.instruction(1) [0xe9] () { this.compare(this.x, this.b); }
 	@CPU.instruction(1) [0xea] () { this.compare(this.x, this.x); }
 	@CPU.instruction(1) [0xeb] () { this.compare(this.x, this.y); }
-	@CPU.instruction(1) async [0xec] () { await this.writeByte(this.x, this.a); }
-	@CPU.instruction(1) async [0xed] () { await this.writeByte(this.x, this.b); }
-	@CPU.instruction(1) async [0xee] () { await this.writeByte(this.x, this.x); }
-	@CPU.instruction(1) async [0xef] () { await this.writeByte(this.x, this.y); }
+	@CPU.instruction(1) [0xec] () { this.writeByte(this.x, this.a); }
+	@CPU.instruction(1) [0xed] () { this.writeByte(this.x, this.b); }
+	@CPU.instruction(1) [0xee] () { this.writeByte(this.x, this.x); }
+	@CPU.instruction(1) [0xef] () { this.writeByte(this.x, this.y); }
 	@CPU.instruction(1) [0xf0] () { this.y = this.a; }
 	@CPU.instruction(1) [0xf1] () { this.y = this.b; }
 	@CPU.instruction(1) [0xf2] () { this.y = this.x; }
 	@CPU.instruction(1) [0xf3] () { this.y = this.y; }
-	@CPU.instruction(1) async [0xf4] () { this.y = await this.readByte(this.a); }
-	@CPU.instruction(1) async [0xf5] () { this.y = await this.readByte(this.b); }
-	@CPU.instruction(1) async [0xf6] () { this.y = await this.readByte(this.x); }
-	@CPU.instruction(1) async [0xf7] () { this.y = await this.readByte(this.y); }
+	@CPU.instruction(1) [0xf4] () { this.y = this.readByte(this.a); }
+	@CPU.instruction(1) [0xf5] () { this.y = this.readByte(this.b); }
+	@CPU.instruction(1) [0xf6] () { this.y = this.readByte(this.x); }
+	@CPU.instruction(1) [0xf7] () { this.y = this.readByte(this.y); }
 	@CPU.instruction(1) [0xf8] () { this.compare(this.y, this.a); }
 	@CPU.instruction(1) [0xf9] () { this.compare(this.y, this.b); }
 	@CPU.instruction(1) [0xfa] () { this.compare(this.y, this.x); }
 	@CPU.instruction(1) [0xfb] () { this.compare(this.y, this.y); }
-	@CPU.instruction(1) async [0xfc] () { await this.writeByte(this.y, this.a); }
-	@CPU.instruction(1) async [0xfd] () { await this.writeByte(this.y, this.b); }
-	@CPU.instruction(1) async [0xfe] () { await this.writeByte(this.y, this.x); }
-	@CPU.instruction(1) async [0xff] () { await this.writeByte(this.y, this.y); }
+	@CPU.instruction(1) [0xfc] () { this.writeByte(this.y, this.a); }
+	@CPU.instruction(1) [0xfd] () { this.writeByte(this.y, this.b); }
+	@CPU.instruction(1) [0xfe] () { this.writeByte(this.y, this.x); }
+	@CPU.instruction(1) [0xff] () { this.writeByte(this.y, this.y); }
 }
 
 for (const item of Object.keys(Flag).filter(k => isNaN(+k)) as (keyof typeof Flag)[]) {
