@@ -1,8 +1,8 @@
 'use strict';
 const onesNot = (base: number) => base ^ 255;
 const readBit = (base: number, mask: number) => base & mask;
-const sign    = (base: number) => readBit(base, 0b10000000) > 0;
-const uint8   = (base: number) => base % 256;
+const sign = (base: number) => readBit(base, 0b10000000) > 0;
+const uint8 = (base: number) => base % 256;
 const twosNot = (base: number) => uint8(onesNot(base) + 1);
 
 const writeBit = (base: number, mask: number, value: number) =>
@@ -10,9 +10,9 @@ const writeBit = (base: number, mask: number, value: number) =>
 
 enum Flag {
 	NEGATIVE = 0b10000000,
-	ZERO     = 0b01000000,
+	ZERO = 0b01000000,
 	OVERFLOW = 0b00100000,
-	CARRY    = 0b00010000,
+	CARRY = 0b00010000,
 	// AUTOBANK = 0b00001000,
 	// CACHE    = 0b00001000,
 	// CP       = 0b00000111,
@@ -37,7 +37,7 @@ export interface CPU {
 
 export class CPU {
 	[instruction: number]: Instruction | undefined;
-	readonly banks: {[x: number]: Uint8Array | undefined} = {};
+	readonly banks: { [x: number]: Uint8Array | undefined; } = {};
 	readonly unbankedMemory = new Uint8Array(128);
 	readonly registers = new Uint8Array(8);
 	readonly output = this.unbankedMemory.subarray(0x70, 128);
@@ -46,7 +46,7 @@ export class CPU {
 
 	constructor () {
 		this.reset();
-		this.sp = 0x38;
+		this.sp = 0xEF;
 	}
 
 	private static instruction (size: 1 | 2 = 1) {
@@ -56,13 +56,15 @@ export class CPU {
 			const func = descriptor.value;
 			if (func == null) throw new TypeError('Cannot wrap null or undefined.');
 
-			descriptor.value = async function wrapped (this: CPU) {
+			const value = async function wrapped (this: CPU) {
 				const ip = this.ip;
 				if (size > 1) this.cache[1] = await this.readByte(ip + 1);
 				this.ip = ip + size;
 				return func.call(this);
-			} as T;
+			} as T & { targetInstruction: string };
+			value.targetInstruction = _p;
 
+			descriptor.value = value;
 			return descriptor;
 		};
 	}
@@ -71,8 +73,8 @@ export class CPU {
 		if (this.terminated) this.reset();
 
 		while (!this.terminated) {
-			const instruction =
-				this[this.cache[0] = await this.readByte(this.ip)] ?? this[0];
+			this.cache[0] = await this.readByte(this.ip);
+			const instruction = this[this.cache[0]] ?? this[0];
 
 			await instruction.call(this);
 		}
@@ -86,12 +88,12 @@ export class CPU {
 
 	readRegister (reg: Register) {
 		const value = this.registers[reg];
-		return reg === Register.SP ? value % 64 : value;
+		return reg === Register.SP ? value | 0xC0 : value;
 	}
 
 	writeRegister (reg: Register, value: number) {
 		value = uint8(value);
-		this.registers[reg] = reg === Register.SP ? value % 64 : value;
+		this.registers[reg] = reg === Register.SP ? value | 0xC0 : value;
 	}
 
 	readFlag (flag: Flag) {
@@ -204,7 +206,7 @@ export class CPU {
 	@CPU.instruction(2) [0x02] () { this.bp = this.cache[1]; }
 	@CPU.instruction(1) [0x03] () { console.log(String.fromCharCode(...this.output)); }
 	@CPU.instruction(2) [0x04] () { this.ip = this.cache[1]; }
-	@CPU.instruction(2) async [0x05] () { this.jumpSubroutine(); }
+	@CPU.instruction(2) async [0x05] () { await this.jumpSubroutine(); }
 	@CPU.instruction(1) async [0x06] () { this.ip = await this.pop(); }
 	@CPU.instruction(1) [0x08] () { this.addCarry(); }
 	@CPU.instruction(1) [0x09] () { this.addCarry(twosNot(this.y)); }
@@ -268,10 +270,10 @@ export class CPU {
 	@CPU.instruction(1) async [0x95] () { this.b = await this.pop(); }
 	@CPU.instruction(1) async [0x96] () { this.x = await this.pop(); }
 	@CPU.instruction(1) async [0x97] () { this.y = await this.pop(); }
-	@CPU.instruction(2) [0x98] () { this.writeByte(this.cache[1], this.a); }
-	@CPU.instruction(2) [0x99] () { this.writeByte(this.cache[1], this.b); }
-	@CPU.instruction(2) [0x9a] () { this.writeByte(this.cache[1], this.x); }
-	@CPU.instruction(2) [0x9b] () { this.writeByte(this.cache[1], this.y); }
+	@CPU.instruction(2) async [0x98] () { await this.writeByte(this.cache[1], this.a); }
+	@CPU.instruction(2) async [0x99] () { await this.writeByte(this.cache[1], this.b); }
+	@CPU.instruction(2) async [0x9a] () { await this.writeByte(this.cache[1], this.x); }
+	@CPU.instruction(2) async [0x9b] () { await this.writeByte(this.cache[1], this.y); }
 	@CPU.instruction(1) [0x9c] () { this.a = 255; }
 	@CPU.instruction(1) [0x9d] () { this.b = 255; }
 	@CPU.instruction(1) [0x9e] () { this.x = 255; }
@@ -374,12 +376,3 @@ for (const item of registers) {
 		set (this: CPU, value) { this.writeRegister(Register[item], value); },
 	});
 }
-
-const cpu = new CPU;
-cpu.writeRegister(Register.X, 1);
-cpu.writeRegister(Register.Y, 3);
-cpu.unbankedMemory[0] = 8;
-cpu.unbankedMemory[1] = 0;
-cpu.start().then(() => {
-	console.log(cpu, cpu.readRegister(Register.FLG).toString(2))
-});
