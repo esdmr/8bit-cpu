@@ -5,7 +5,9 @@
     "clean": "rimraf build",
     "build": "npm run build:src && npm run build:jison",
     "build:src": "tsc -p .",
-    "build:jison": "jison src/bpp.y src/bpp.l -o build/bpp.cjs -m commonjs",
+    "build:jison": "npm run build:jison:asm && npm run build:jison:bpp",
+    "build:jison:asm": "jison src/asm.y src/asm.l -o build/asm.cjs -m commonjs",
+    "build:jison:bpp": "jison src/bpp.y src/bpp.l -o build/bpp.cjs -m commonjs",
     "watch:src": "tsc -w -p .",
     "prepare": "npm run clean && npm run build"
   },
