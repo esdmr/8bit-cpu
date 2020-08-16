@@ -41,7 +41,7 @@
       "patterns": [
         {
           "name": "constant.numeric.binary.asm8",
-          "match": "(?<=^|\\s)(#?%)[01]{8}(?=$|\\s)",
+          "match": "(?<=^|\\s)([#+-]?%)[01]{8}(?=$|\\s)",
           "captures": {
             "1": {
               "name": "punctuation.definition.numeric.binary.asm8"
@@ -50,7 +50,7 @@
         },
         {
           "name": "constant.numeric.hex.asm8",
-          "match": "(?i)(?<=^|\\s)(#?\\$)[0-9a-f]{2}(?=$|\\s)",
+          "match": "(?i)(?<=^|\\s)([#+-]?\\$)[0-9a-f]{2}(?=$|\\s)",
           "captures": {
             "1": {
               "name": "punctuation.definition.numeric.hex.asm8"
@@ -59,7 +59,7 @@
         },
         {
           "name": "constant.numeric.decimal.asm8",
-          "match": "(?<=^|\\s)(#?)\\d{1,3}(?=$|\\s)",
+          "match": "(?<=^|\\s)([#+-]?)\\d{1,3}(?=$|\\s)",
           "captures": {
             "1": {
               "name": "punctuation.definition.numeric.decimal.asm8"
