@@ -1,0 +1,28 @@
+namespace Resources {
+	char*! hello = "Hello, World!\0";
+}
+
+void main () {
+	using Resources;
+	char* output = 0xf0;
+	char byte = *hello;
+
+	while (byte) {
+		if (output == 0) {
+			output = 0xf0;
+			asm("dbg");
+		}
+
+		*output = byte;
+		hello++;
+		output++;
+		byte = *hello;
+	}
+
+	while (!output) {
+		*output = 0;
+		output++;
+	}
+
+	asm("dbg");
+}
