@@ -3,22 +3,21 @@
   "compilerOptions": {
     "allowJs": true,
     "charset": "utf8",
+    "declaration": true,
+    "experimentalDecorators": true,
     "forceConsistentCasingInFileNames": true,
+    "lib": ["ES2020.String"],
     "module": "ESNext",
     "moduleResolution": "classic",
     "newLine": "lf",
     "outDir": "build",
     "pretty": true,
-    "experimentalDecorators": true,
     "removeComments": true,
     "rootDir": "src",
     "sourceMap": true,
-    "declaration": true,
     "strict": true,
-    "target": "es2018",
-    "lib": [
-      "ES2020.String"
-    ]
+    "stripInternal": true,
+    "target": "es2018"
   },
   "include": [
     "src"
