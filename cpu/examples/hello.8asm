@@ -1,8 +1,7 @@
 bank 0:
 __hello:
 	.char "Hello, World!"
-	.fill $7e '.'
-	.char #0 ; Part of the string, not the fill below.
+	.char #0
 
 bank swap:
 main:
