@@ -5,8 +5,8 @@ StringEscape	\\\\([\"\\\\/bfnrt]|\u[0-9a-fA-F]{4})
 \;.*\n?	/* Ignore */
 ":"	return ':';
 "#"	return '#';
-"+"	return '+-';
-"-"	return '+-';
+"+"	return '+';
+"-"	return '-';
 "bank"	return 'bank';
 ".char"	return 'dchar';
 ".fill"	return 'dfill';

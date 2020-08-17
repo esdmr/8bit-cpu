@@ -1,7 +1,7 @@
 %start asm
 %%
 
-asm: InstructionLst EOF { return convert($1); };
+asm: InstructionLst EOF { return $1; };
 
 Number
 	: dec { $$ = parseInt($1, 10); }
@@ -17,14 +17,17 @@ Imd
 
 Ptr
 	: Number { $$ = {type: 'ptr', value: {type: 'abs', value: $1}}; }
-	| '+-' Number { $$ = {type: 'ptr', value: {type: 'rel', value: parseRel($1, $2)}}; }
+	| '+' Number { $$ = {type: 'ptr', value: {type: 'rel', value: $2}}; }
+	| '-' Number { $$ = {type: 'ptr', value: {type: 'rel', value: -$2}}; }
 	| id { $$ = {type: 'ptr', value: {type: 'lbl', value: [null, $1]}}; }
 	| Number ':' id { $$ = {type: 'ptr', value: {type: 'lbl', value: [$1, $3]}}; }
 	;
 
 Any: Imd { $$ = $1; } | Ptr { $$ = $1; };
 
-CharLit: charlit { $$ = parseChar($1); } | '#' Number { $$ = String.fromCharCode($2); };
+CharLit
+	: charlit { $$ = JSON.parse($1.replace(/'/g, '"'))); }
+	| '#' Number { $$ = String.fromCharCode($2); };
 
 Instruction
 	: anyarg Any { $$ = {...$2, name: $1}; }
