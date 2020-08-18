@@ -26,7 +26,7 @@ Ptr
 Any: Imd { $$ = $1; } | Ptr { $$ = $1; };
 
 CharLit
-	: charlit { $$ = JSON.parse($1.replace(/'/g, '"'))); }
+	: charlit { $$ = JSON.parse($1.replace(/'/g, '"')); }
 	| '#' Number { $$ = String.fromCharCode($2); };
 
 Instruction
@@ -39,12 +39,8 @@ Instruction
 	| id ':' { $$ = {type: 'lbl', value: $1}; }
 	| dchar CharLit { $$ = {type: 'str', value: $2}; }
 	| dchar strlit { $$ = {type: 'str', value: JSON.parse($2)}; }
-	| dfill '#' Number charlit { $$ = {type: 'flf', value: [$3, $4]}; }
+	| dfill '#' Number CharLit { $$ = {type: 'flf', value: [$3, $4]}; }
 	| dfill Number CharLit { $$ = {type: 'flt', value: [$2, $3]}; }
 	;
 
 InstructionLst: InstructionLst Instruction { $1.push($2); $$ = $1; } | { $$ = []; };
-
-%%
-
-const { convert, parseChar, parseRel } = require.cache.internal.exports;

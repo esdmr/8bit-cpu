@@ -3,7 +3,7 @@
     "configurations": [
         {
           "name": "Launch Program",
-          "program": "${workspaceFolder}/cpu/build/asm.js",
+          "program": "${workspaceFolder}/cpu/build/bin/assembler.js",
           "request": "launch",
           "skipFiles": [
             "<node_internals>/**"

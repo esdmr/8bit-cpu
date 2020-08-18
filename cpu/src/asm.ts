@@ -1,15 +1,25 @@
 import { createRequire } from 'module';
-import { inspect } from 'util';
-import { argv } from 'process';
-// import { writeFileSync } from 'fs';
-import { CPU } from './cpu.js';
 
-const instrTable = {
+const require = createRequire(import.meta.url);
+
+/**
+ * Parses assembly code and returns a flat AST
+ * @param text The content of the assembly code
+ * @returns resulting AST
+ */
+export const parse: (text: string) => AST = require('./asm.cjs').parse;
+
+/**
+ * Lookup table for translating instructions
+ */
+export const instrTable = {
+	/** Immediate */
 	imd: {
 		bnk: 0x02,
 		lda: 0xA8, ldb: 0xA9, ldx: 0xAA, ldy: 0xAB,
 		cpa: 0xB8, cpb: 0xB9, cpx: 0xBA, cpy: 0xBB,
 	},
+	/** Indirect (Pointer) */
 	ptr: {
 		jmp: 0x04, jsr: 0x05,
 		bpl: 0x40, bvc: 0x41, bcc: 0x42, bnq: 0x43,
@@ -17,6 +27,7 @@ const instrTable = {
 		lda: 0x88, ldb: 0x89, ldx: 0x8A, ldy: 0x8B,
 		sta: 0x98, stb: 0x99, stx: 0x9A, sty: 0x9B,
 	},
+	/** Implied */
 	imp: {
 		hlt: 0x00, nop: 0x01, dbg: 0x03,
 		rts: 0x06,
@@ -55,219 +66,277 @@ const instrTable = {
 	},
 } as const;
 
-function parseChar (char: string) {
-	return JSON.parse(char.replace(/'/g, '"'));
-}
+export class Assembler {
+	private readonly banks = new Map<number | 'swap', BankData>();
+	private bankName?: number | 'swap';
+	private isCached = false;
+	private offset = 0;
 
-function parseRel (neg: '+' | '-', off: number) {
-	return (neg === '-' ? -1 : 1) * off;
-}
-
-function convert (asm: AST) {
-	const output: {[x in number | 'swap']?: {labels: {[x in string]?: number}, bank: (number | [number | null, string])[]}} = Object.create(null);
-	let current: NonNullable<typeof output[number]> | null = null;
-	let currentBank: number | null = null;
-	let offset = 0;
-
-	for (const item of asm) {
-		switch (item.type) {
-			case 'imd':
-			case 'ptr':
-			case 'imp':
-				if (current == null) throw new Error('No bank specified.');
-				current.bank.push(
-					instrTable[item.type][item.name.toLowerCase() as never]);
-
-				if (item.value != null) {
-					if (item.value.type === 'rel') {
-						item.value.value += offset + current.bank.length;
-					} else if (item.value.type === 'lbl') {
-						current.bank.push([
-							item.value.value[0] ?? currentBank,
-							item.value.value[1],
-						]);
-
-						break;
-					}
-
-					current.bank.push(item.value.value);
-				}
-
-				break;
-
-			case 'bnk':
-				current = {bank: [], labels: Object.create(null)};
-				output[item.value] = current;
-				currentBank = item.value === 'swap' ? null : item.value;
-				offset = item.value === 'swap' ? 128 : 0;
-				break;
-
-			case 'lbl':
-				if (current == null) throw new Error('No bank specified.');
-				current.labels[item.value] = offset + current.bank.length;
-				break;
-
-			case 'str':
-				if (current == null) throw new Error('No bank specified.');
-				for (const char of item.value)
-					current.bank.push(char.charCodeAt(0));
-				break;
-
-			case 'flf':
-				if (current == null) throw new Error('No bank specified.');
-				for (let i = 0; i < item.value[0]; i++)
-					current.bank.push(item.value[1].charCodeAt(0));
-				break;
-
-			case 'flt':
-				if (current == null) throw new Error('No bank specified.');
-				for (let i = offset + current.bank.length; i <= item.value[0]; i++)
-					current.bank.push(item.value[1].charCodeAt(0));
-				break;
-		}
+	private get bankData () {
+		if (this.bankName == null) throw new Error('No bank specified.');
+		return this.banks.get(this.bankName)!;
 	}
 
-	// const bankIndex = Object.keys(output).
-	// 	map(key => key === 'swap' ? key : parseInt(key, 10));
+	private constructor (private readonly text: string) { }
 
-	// const buffer = new Uint8Array(Object.keys(output).length * 128);
+	/**
+	 * Assembles given source into ArrayBuffer
+	 * @param text Assembly source to be assembled
+	 * @returns Map of BankData containing ArrayBuffer and list of labels
+	 */
+	static assemble (text: string) {
+		return new Assembler(text).assemble();
+	}
 
-	for (const [name, {bank}] of
-		Object.entries(output) as [string, NonNullable<typeof current>][]) {
-		if (bank.length > 128) throw new Error(`Bank ${name} is large.`);
-		// let offset = 0;
+	private assemble () {
+		if (this.isCached) return this.banks;
 
-		for (const [index, value] of bank.entries()) {
-			if (Array.isArray(value)) {
-				const label = output[value[0] ?? 'swap']?.labels[value[1]] ??
-					output.swap?.labels[value[1]];
+		const parsers = {
+			bnk: this.bank,
+			flf: this.directiveFillFor,
+			flt: this.directiveFillTo,
+			imd: this.instruction,
+			imp: this.instruction,
+			lbl: this.label,
+			ptr: this.instruction,
+			str: this.directiveChar,
+		};
 
-				if (label == null) throw new Error('Undefined label ' + value[1]);
-				bank[index] = label;
-				// buffer[offset * 128 + index] = label;
-			} else {
-				// buffer[offset * 128 + index] = value;
+		for (const item of parse(this.text)) {
+			parsers[item.type].call(this, item as never);
+		}
+
+		for (const {bytes, buffer} of this.banks.values()) {
+			for (const [index, value] of bytes.entries()) {
+				if (Array.isArray(value)) {
+					const label = this.banks.get(value[0])?.labels[value[1]] ??
+						this.banks.get('swap')?.labels[value[1]];
+
+					if (label == null) throw new Error('Undefined label ' + value[1]);
+					bytes[index] = label;
+					buffer[index] = label;
+				} else {
+					buffer[index] = value;
+				}
+			}
+		}
+
+		this.isCached = true;
+		return this.banks;
+	}
+
+	private push (value: BankData['bytes'][number]) {
+		this.bankData.bytes.push(value);
+		this.offset++;
+
+		if (this.offset > (this.bankName! === 'swap' ? 256 : 128))
+			throw new Error(`Bank ${this.bankName} is large.`);
+	}
+
+	private instruction (item: AnyInstruction) {
+		this.push(instrTable[item.type][item.name.toLowerCase() as never]);
+
+		if (item.value != null) {
+			if (item.value.type === 'rel') {
+				item.value.value += this.offset;
+			} else if (item.value.type === 'lbl') {
+				item.value.value[0] ?? (item.value.value[0] = this.bankName!);
 			}
 
-			offset++;
+			this.push(item.value.value);
 		}
 	}
 
-	// if (typeof module !== 'undefined' && require.main === module) {
-	outputBin(output as never);
-	// } else {
-	// 	return {buffer, bankIndex};
-	// }
-}
+	private bank (item: BankSelect) {
+		const bank = Object.freeze({
+			buffer: new Uint8Array(128),
+			bytes: [],
+			labels: Object.create(null),
+		});
 
-function checkArgs () {
-	if (!argv[3]) {
-		console.log('Output file not provided.');
-		console.log(`Usage: ${argv[1]} INPUT --eval [--debug]`);
-		console.log(`Usage: ${argv[1]} INPUT OUTPUT`);
-		process.exit(1);
+		this.banks.set(item.value, bank);
+		this.bankName = item.value;
+		this.offset = item.value === 'swap' ? 128 : 0;
+	}
+
+	private label (item: Label) {
+		this.bankData.labels[item.value] = this.offset;
+	}
+
+	private directiveChar (item: DirectiveChar) {
+		for (const char of item.value)
+			this.push(char.charCodeAt(0));
+	}
+
+	private directiveFillFor (item: DirectiveFill) {
+		for (let index = 0; index < item.value[0]; index++)
+			this.push(item.value[1].charCodeAt(0));
+	}
+
+	private directiveFillTo (item: DirectiveFill) {
+		for (let index = this.offset; index <= item.value[0]; index++)
+			this.push(item.value[1].charCodeAt(0));
 	}
 }
 
-function outputBin (output: {[x in number | 'swap']: {bank: number[]}}) {
-	// const outfile = argv[3];
-	checkArgs();
-
-	// if (outfile !== '--eval') {
-	// 	return writeFileSync(require('path').normalize(outfile), buffer);
-	// }
-
-	const cpu = new CPU();
-
-	Object.entries(output).forEach(([name, {bank: buffer}]) => {
-		const bank = name === 'swap' ?
-			cpu.unbankedMemory :
-			(cpu.banks[+name] = new Uint8Array(128));
-
-		for (let index = 0; index < 128; index++) {
-			bank[index] = buffer[index];
-		}
-	});
-
-	cpu.start();
-
-	if (argv[4] === '--debug') {
-		console.log(inspect(cpu, {
-			colors: true,
-			depth: Infinity,
-			maxArrayLength: Infinity,
-		}));
-	}
-}
-
-const require = createRequire(import.meta.url);
-
-require.cache.internal = {
-	id: 'internal',
-	children: [],
-	exports: {
-		parseChar,
-		parseRel,
-		convert,
-	},
-	filename: '<ASM API>',
-	loaded: true,
-	parent: null,
-	path: '<ASM Internal>',
-	paths: [],
-	require,
-};
-
-export const parse: (text: string) => AST = require('./asm.cjs').parse;
-const main: (argv: string[]) => void = require('./asm.cjs').main;
-
-
-// if (typeof module !== 'undefined' && require.main === module) {
-checkArgs();
-main(argv.slice(1));
-// }
-
-type AST = ASTItem[];
+/**
+ * Assembly syntax representation
+ */
+export type AST = ASTItem[];
 type instrTable = typeof instrTable;
-type Keys<T> = T extends any ? keyof T : never;
-type MakeInstruction<T extends Keys<instrTable>> = T extends any ? Instruction<T> : any;
+type MakeInstruction<T extends keyof instrTable> = T extends any ? Instruction<T> : never;
+type LabelReference = [number | 'swap', string];
+type AnyInstruction = MakeInstruction<keyof instrTable>;
 
 type ASTItem
-	= MakeInstruction<Keys<instrTable>>
-	| Bank
+	= AnyInstruction
+	| BankSelect
 	| Label
 	| DirectiveChar
 	| DirectiveFill
 	;
 
-interface Instruction<T extends Keys<instrTable>> {
-	name: Keys<instrTable[T]>;
+export interface BankData {
+	/**
+	 * Built source code
+	 */
+	buffer: Uint8Array;
+	/** @internal */
+	bytes: (number | LabelReference)[];
+	/**
+	 * List of labels in this bank
+	 */
+	labels: { [x in string]?: number; };
+}
+
+/**
+ * Assembly instruction
+ *
+ * @example ```asm8
+ * hlt      ; Implied
+ * lda #123 ; Immediate
+ * lda  123 ; Indirect (Refered as pointer within the source)
+ * ```
+ */
+export interface Instruction<T extends keyof instrTable> {
+	name: keyof instrTable[T];
 	type: T;
+	/**
+	 * Arguments of the instruction, if any
+	 */
 	value: T extends 'imp' ? undefined : {
 		type: 'abs' | 'rel';
+		/**
+		 * Absolute or relative number
+		 *
+		 * @example ```asm8
+		 * Absolute:
+		 * 12
+		 * $ae
+		 * %10011100
+		 * ; Immediate
+		 * #12
+		 * #$ae
+		 * #%10011100
+		 *
+		 * Relative:
+		 * +12
+		 * -$ae
+		 * +%00000000
+		 * ; Does not support immediate
+		 * ```
+		 */
 		value: number;
 	} | {
 		type: 'lbl';
-		value: [number | null, string];
+		/**
+		 * Identifier of the label
+		 * @property 0 Identifier of the bank. null for current bank or 'swap'.
+		 * @property 1 Name of the label
+		 *
+		 * @example ```asm8
+		 * bank 0:
+		 * some_label:
+		 * jmp some_label    ; [null, "some_label"] -> 0
+		 * jmp 1:some_label  ; [1,    "some_label"] -> 1
+		 *
+		 * bank 1:
+		 * some_label:
+		 * ```
+		 */
+		value: LabelReference;
 	};
 }
 
-interface Bank {
+/**
+ * Switches selected bank to be written
+ *
+ * @example ```asm8
+ * ; Only comments can exist before the first bank select
+ * bank 0:    ; Smallest
+ * bank $ff:  ; Largest
+ * bank swap: ; 'swap'
+ * ```
+ */
+export interface BankSelect {
 	type: 'bnk';
+	/**
+	 * Identifier of the bank selected
+	 *
+	 * If 'swap' is chosen, all labels will have an offset of 128 bytes
+	 */
 	value: number | 'swap';
 }
 
-interface Label {
+/**
+ * Refers to a point in the memory
+ *
+ * @example ```asm8
+ * func:            jsr _private_function
+ * _func_part:      rts
+ * _private_func:   rts
+ * __resource:      .char "Hello!" .char #0
+ * _func__resource: .char #$f0
+ * ```
+ */
+export interface Label {
 	type: 'lbl';
+	/**
+	 * Label name
+	 */
 	value: string;
 }
 
-interface DirectiveChar {
+/**
+ * Inserts one or more literal characters
+ *
+ * @example ```asm8
+ * .char 'a'      ; Insert character 'a'
+ * .char #0       ; Insert NULL character
+ * .char "Hello!" ; Insert string "Hello!"
+ * ```
+ */
+export interface DirectiveChar {
 	type: 'str';
+	/**
+	 * String or character to insert
+	 */
 	value: string;
 }
 
-interface DirectiveFill {
+/**
+ * Fills area of a bank with a specified character
+ *
+ * @example ```asm8
+ * .fill #12 #0  ; Fill 12 bytes with the NULL character
+ * .fill 24  'a' ; Fill until the 24th byte (inclusive) with character 'a'
+ * ```
+ */
+export interface DirectiveFill {
 	type: 'flf' | 'flt';
+	/**
+	 * @property 0 End index, or length
+	 * @property 1 Character to fill with
+	 */
 	value: [number, string];
 }
