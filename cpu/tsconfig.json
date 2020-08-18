@@ -12,7 +12,6 @@
     "newLine": "lf",
     "outDir": "build",
     "pretty": true,
-    "removeComments": true,
     "rootDir": "src",
     "sourceMap": true,
     "strict": true,
