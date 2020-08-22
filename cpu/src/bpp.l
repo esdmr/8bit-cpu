@@ -1,7 +1,8 @@
+StrEsc	\\\\([\"\\\\/bfnrt]|\u[0-9a-fA-F]{4})
 %%
-\s+ /* Ignore */ // Spaces
-\/\/.*\n? /* Ignore */ // Line comments
-\/\*.*?\*\/ /* Ignore */ // Block comments
+\s+	/* Ignore */ // Spaces
+\/\/.*\n?	/* Ignore */ // Line comments
+\/\*.*?\*\/	/* Ignore */ // Block comments
 "asm"	return 'asm';
 "const"	return 'const';
 "else"	return 'else';
@@ -17,7 +18,8 @@
 0b[0-1]{1,8}	return 'BinLit';
 0o[0-1]{1,3}	return 'OctLit';
 [0-9]{1,3}	return 'DecLit';
-\"(\\\"|[^"\n])+?\"	return 'StringLit';
+\"({StrEsc}|[^"\n])+?\"	return 'StringLit';
+\'({StrEsc}|.)\'	return 'CharLit';
 [a-zA-Z_$][a-zA-Z0-9_$]*	return 'Identifier';
 
 ","	return ',';
@@ -30,8 +32,6 @@
 ")"	return ')';
 "]"	return ']';
 "}"	return '}';
-"*^"	return '*^'
-"*!"	return '*!'
 "*"	return '*';
 
 "++"	return '++';
