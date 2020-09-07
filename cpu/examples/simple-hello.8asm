@@ -1,0 +1,6 @@
+bank swap:
+	dbg
+	hlt
+	.fill $ef #0
+	.char "Hello, World!"
+	.fill $ff #0
