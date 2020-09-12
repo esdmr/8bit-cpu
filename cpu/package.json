@@ -2,20 +2,23 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "clean": "rimraf build",
-    "build": "npm run build:src && npm run build:jison",
-    "build:src": "tsc -p .",
-    "build:jison": "npm run build:jison:asm",
     "build:jison:asm": "jison src/asm.y src/asm.l -o build/asm.cjs -m commonjs",
-    "watch:src": "tsc -w -p .",
-    "prepare": "npm run clean && npm run build"
+    "build:jison": "npm run build:jison:asm",
+    "build:src": "tsc -p .",
+    "build": "npm run build:src && npm run build:jison",
+    "clean": "rimraf build",
+    "fmt": "tsfmt --replace",
+    "fmt:check": "tsfmt --verify",
+    "prepare": "npm run clean && npm run build",
+    "watch:src": "tsc -w -p ."
   },
   "author": "Saeed M Rad",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^14.0.27",
     "rimraf": "^3.0.2",
-    "typescript": "^3.9.7"
+    "typescript": "^3.9.7",
+    "typescript-formatter": "^7.2.2"
   },
   "dependencies": {
     "jison": "^0.4.18"

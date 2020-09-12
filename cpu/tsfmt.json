@@ -1,0 +1,20 @@
+{
+  "newLineCharacter": "\n",
+  "convertTabsToSpaces": false,
+  "insertSpaceAfterCommaDelimiter": true,
+  "insertSpaceAfterSemicolonInForStatements": true,
+  "insertSpaceBeforeAndAfterBinaryOperators": true,
+  "insertSpaceAfterConstructor": true,
+  "insertSpaceAfterKeywordsInControlFlowStatements": true,
+  "insertSpaceAfterFunctionKeywordForAnonymousFunctions": true,
+  "insertSpaceAfterOpeningAndBeforeClosingNonemptyParenthesis": false,
+  "insertSpaceAfterOpeningAndBeforeClosingNonemptyBrackets": false,
+  "insertSpaceAfterOpeningAndBeforeClosingNonemptyBraces": true,
+  "insertSpaceAfterOpeningAndBeforeClosingTemplateStringBraces": false,
+  "insertSpaceAfterOpeningAndBeforeClosingJsxExpressionBraces": false,
+  "insertSpaceAfterTypeAssertion": false,
+  "insertSpaceBeforeFunctionParenthesis": true,
+  "insertSpaceBeforeTypeAnnotation": false,
+  "placeOpenBraceOnNewLineForFunctions": false,
+  "placeOpenBraceOnNewLineForControlBlocks": false
+}
