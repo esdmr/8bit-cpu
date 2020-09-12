@@ -14,13 +14,16 @@
     "contributes": {
         "languages": [{
             "id": "asm8",
-            "aliases": ["8bit Assembly", "asm8"],
+            "aliases": ["8bit Assembly", "asm8", "8asm"],
             "extensions": [".8asm",".asm8"],
             "configuration": "./language-configuration.json"
         }],
         "grammars": [{
             "language": "asm8",
             "scopeName": "source.asm8",
+            "embeddedLanguages": {
+              "meta.embedded.json": "json"
+            },
             "path": "./syntaxes/asm8.tmLanguage.json"
         }]
     }

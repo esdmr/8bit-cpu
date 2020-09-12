@@ -37,4 +37,4 @@ _main_while3:
 
 _main_4:
 	dbg
-	hlt
+	brk

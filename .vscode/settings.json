@@ -1,0 +1,4 @@
+{
+  "typescript.tsdk": "cpu/node_modules/typescript/lib",
+  "eslint.enable": false,
+}

@@ -1,4 +1,6 @@
-'use strict';
+import { BUS } from './bus.js';
+import { RW } from './components/base.js';
+
 const onesNot = (base: number) => base ^ 255;
 const readBit = (base: number, mask: number) => base & mask;
 const sign = (base: number) => readBit(base, 0b10000000) > 0;
@@ -13,9 +15,6 @@ enum Flag {
 	ZERO = 0b01000000,
 	OVERFLOW = 0b00100000,
 	CARRY = 0b00010000,
-	// AUTOBANK = 0b00001000,
-	// CACHE    = 0b00001000,
-	// CP       = 0b00000111,
 }
 
 enum Register { A, B, X, Y, IP, SP, BP, FLG }
@@ -37,15 +36,14 @@ export interface CPU {
 
 export class CPU {
 	[instruction: number]: Instruction | undefined;
-	readonly banks: { [x: number]: Uint8Array | undefined; } = {};
-	readonly unbankedMemory = new Uint8Array(128);
-	readonly registers = new Uint8Array(8);
-	readonly output = this.unbankedMemory.subarray(0x70, 128);
+	readonly bus = new BUS();
 	readonly cache = new Uint8Array(2);
+	readonly registers = new Uint8Array(8);
+	readonly unbankedMemory = new Uint8Array(128);
 	terminated = false;
 
 	constructor () {
-		this.reset();
+		this.ip = 0x80;
 		this.sp = 0xEF;
 	}
 
@@ -63,9 +61,8 @@ export class CPU {
 				return func.call(this);
 			} as T;
 
-			// Rename function for debugging purposes.
 			Object.defineProperty(descriptor.value, 'name', {
-				value: _p,
+				value: func.name,
 			});
 
 			return descriptor;
@@ -73,8 +70,6 @@ export class CPU {
 	}
 
 	start () {
-		if (this.terminated) this.reset();
-
 		while (!this.terminated) {
 			this.cache[0] = this.readByte(this.ip);
 			const instruction = this[this.cache[0]] ?? this[0];
@@ -83,10 +78,9 @@ export class CPU {
 		}
 	}
 
-	reset () {
+	resume () {
 		this.terminated = false;
-		this.ip = 128;
-		// this.cache = false;
+		this.start();
 	}
 
 	readRegister (reg: Register) {
@@ -112,7 +106,12 @@ export class CPU {
 		offset = uint8(offset);
 
 		if (offset < 128) {
-			return this.banks[this.bp]?.[offset] ?? 0;
+			return this.bus.emit({
+				addr: offset,
+				bp: this.bp,
+				data: 0,
+				rw: RW.READ,
+			});
 		} else {
 			return this.unbankedMemory[offset - 128];
 		}
@@ -122,9 +121,12 @@ export class CPU {
 		offset = uint8(offset);
 
 		if (offset < 128) {
-			const bp = this.bp;
-			if (this.banks[bp] == null) this.banks[bp] = new Uint8Array(128);
-			this.banks[bp]![offset] = value;
+			this.bus.emit({
+				addr: offset,
+				bp: this.bp,
+				data: value,
+				rw: RW.WRITE,
+			});
 		} else {
 			this.unbankedMemory[offset - 128] = value;
 		}
@@ -200,7 +202,7 @@ export class CPU {
 	@CPU.instruction(1) [0x00] () { this.terminated = true; }
 	@CPU.instruction(1) [0x01] () { } // No-OP
 	@CPU.instruction(2) [0x02] () { this.bp = this.cache[1]; }
-	@CPU.instruction(1) [0x03] () { console.log(String.fromCharCode(...this.output)); }
+	@CPU.instruction(1) [0x03] () { console.warn('DEBUG'); }
 	@CPU.instruction(2) [0x04] () { this.ip = this.cache[1]; }
 	@CPU.instruction(2) [0x05] () { this.jumpSubroutine(); }
 	@CPU.instruction(1) [0x06] () { this.ip = this.pop(); }

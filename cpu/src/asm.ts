@@ -29,7 +29,7 @@ export const instrTable = {
 	},
 	/** Implied */
 	imp: {
-		hlt: 0x00, nop: 0x01, dbg: 0x03,
+		brk: 0x00, nop: 0x01, dbg: 0x03,
 		rts: 0x06,
 		adc: 0x08, sbc: 0x09, ntx: 0x0A, nty: 0x0B,
 		rol: 0x0C, rlc: 0x0D, shl: 0x0E, eor: 0x0F,
@@ -68,6 +68,7 @@ export const instrTable = {
 
 export class Assembler {
 	private readonly banks = new Map<number | 'swap', BankData>();
+	private readonly inits: DirectiveInit[] = [];
 	private bankName?: number | 'swap';
 	private isCached = false;
 	private offset = 0;
@@ -85,7 +86,13 @@ export class Assembler {
 	 * @returns Map of BankData containing ArrayBuffer and list of labels
 	 */
 	static assemble (text: string) {
-		return new Assembler(text).assemble();
+		const assembler = new Assembler(text);
+		assembler.assemble();
+
+		return {
+			banks: assembler.banks,
+			inits: assembler.inits,
+		};
 	}
 
 	private assemble () {
@@ -97,6 +104,7 @@ export class Assembler {
 			flt: this.directiveFillTo,
 			imd: this.instruction,
 			imp: this.instruction,
+			int: this.directiveInit,
 			lbl: this.label,
 			ptr: this.instruction,
 			str: this.directiveChar,
@@ -106,7 +114,7 @@ export class Assembler {
 			parsers[item.type].call(this, item as never);
 		}
 
-		for (const {bytes, buffer} of this.banks.values()) {
+		for (const { bytes, buffer } of this.banks.values()) {
 			for (const [index, value] of bytes.entries()) {
 				if (Array.isArray(value)) {
 					const label = this.banks.get(value[0])?.labels[value[1]] ??
@@ -122,7 +130,6 @@ export class Assembler {
 		}
 
 		this.isCached = true;
-		return this.banks;
 	}
 
 	private push (value: BankData['bytes'][number]) {
@@ -159,6 +166,10 @@ export class Assembler {
 		this.offset = item.value === 'swap' ? 128 : 0;
 	}
 
+	private directiveInit (item: DirectiveInit) {
+		this.inits.push(item);
+	}
+
 	private label (item: Label) {
 		this.bankData.labels[item.value] = this.offset;
 	}
@@ -191,6 +202,7 @@ type AnyInstruction = MakeInstruction<keyof instrTable>;
 type ASTItem
 	= AnyInstruction
 	| BankSelect
+	| DirectiveInit
 	| Label
 	| DirectiveChar
 	| DirectiveFill
@@ -286,6 +298,23 @@ export interface BankSelect {
 	 * If 'swap' is chosen, all labels will have an offset of 128 bytes
 	 */
 	value: number | 'swap';
+}
+
+/**
+ * Initializes selected bank, also switches bank
+ *
+ * @see BankSelect
+ * @example ```asm8
+ * .init "ram"
+ * ```
+ */
+export interface DirectiveInit {
+	type: 'int';
+	/**
+	 * @property 0 Target component
+	 * @property 1 Arguments (Sub-set JSON)
+	 */
+	value: [string, any];
 }
 
 /**

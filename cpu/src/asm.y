@@ -30,6 +30,32 @@ Char
 	| '#' Number { $$ = String.fromCharCode($2); }
 	;
 
+String: strlit { $$ = JSON.parse($2); };
+
+JSONValue
+	: JSONString { $$ = $1; }
+	| JSONNumber { $$ = $1; }
+	| JSONArray { $$ = $1; }
+	| JSONObject { $$ = $1; }
+	;
+
+JSONString: String { $$ = $1; };
+JSONNumber: dec { $$ = $1; };
+JSONArray: '[' JSONArrayItem ']' { $$ = $2; };
+JSONArrayItem: JSONArrayItem ',' JSONValue { $1.push($2); $$ = $1; } | { $$ = []; };
+
+JSONBoolean
+	: true { $$ = true; }
+	| false { $$ = false; }
+	;
+
+JSONObject: '{' JSONObjectItem '}' { $$ = $2; };
+
+JSONObjectItem
+	: JSONObjectItem ',' JSONString ':' JSONValue { $1[$2] = $3; $$ = $1; }
+	| { $$ = {}; }
+	;
+
 Instruction
 	: anyarg Any { $$ = {...$2, name: $1}; }
 	| imdarg Imd { $$ = {...$2, name: $1}; }
@@ -39,9 +65,10 @@ Instruction
 	| bank swap ':' { $$ = {type: 'bnk', value: 'swap'}; }
 	| id ':' { $$ = {type: 'lbl', value: $1}; }
 	| dchar Char { $$ = {type: 'str', value: $2}; }
-	| dchar strlit { $$ = {type: 'str', value: JSON.parse($2)}; }
+	| dchar String { $$ = {type: 'str', value: $2}; }
 	| dfill '#' Number Char { $$ = {type: 'flf', value: [$3, $4]}; }
 	| dfill Number Char { $$ = {type: 'flt', value: [$2, $3]}; }
+	| dinit strlit JSONValue { $$ = {type: 'int', value: [$2, $3]}; }
 	;
 
 InstructionLst: InstructionLst Instruction { $1.push($2); $$ = $1; } | { $$ = []; };

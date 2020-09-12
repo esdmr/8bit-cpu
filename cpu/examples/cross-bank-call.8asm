@@ -4,7 +4,7 @@ func1:
 	lda #1
 	ldb #1:func3
 	jsr func2
-	hlt
+	brk
 
 
 bank 1:

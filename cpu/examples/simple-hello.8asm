@@ -1,6 +1,6 @@
 bank swap:
 	dbg
-	hlt
+	brk
 	.fill $ef #0
 	.char "Hello, World!"
 	.fill $ff #0

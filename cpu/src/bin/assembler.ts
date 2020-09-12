@@ -3,6 +3,7 @@ import * as process from 'process';
 import * as fs from 'fs';
 import { CPU } from '../cpu.js';
 import { Assembler } from '../asm.js';
+import * as components from '../components/index.js';
 
 function main () {
 	if (![4, 5].includes(process.argv.length)) {
@@ -17,16 +18,26 @@ function main () {
 	const shouldDebug = process.argv[4] === '--debug';
 
 	const input = fs.readFileSync(inputFile, 'utf8');
-	const asm = Assembler.assemble(input);
+	const { banks, inits } = Assembler.assemble(input);
 
 	if (outputFile === '--eval') {
 		const cpu = new CPU();
 
-		for (const [name, {buffer}] of asm.entries()) {
-			if (name === 'swap') {
+		for (const init of inits) {
+			const [name, args] = init.value;
+
+			if (!(name in components)) {
+				throw new Error(`Component ${name} does not exist.`);
+			}
+
+			cpu.bus.on(new (components[name as never] as any)(args));
+		}
+
+		for (const [bank, { buffer }] of banks.entries()) {
+			if (bank === 'swap') {
 				cpu.unbankedMemory.set(buffer);
 			} else {
-				cpu.banks[name] = buffer;
+				cpu.bus.on(new components.Memory({ bank, buffer }));
 			}
 		}
 
