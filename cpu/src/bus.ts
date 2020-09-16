@@ -1,7 +1,10 @@
 import { Component } from './components/base.js';
+import { CPU } from './cpu.js';
 
 export class BUS {
 	private readonly components = new Set<Component>();
+
+	constructor (private readonly cpu: CPU) {}
 
 	find<T extends Component> (constructor: new (...args: any[]) => T) {
 		for (const component of this.components) {
@@ -15,6 +18,8 @@ export class BUS {
 
 	on (component: Component) {
 		this.components.add(component);
+
+		component.onAttached(this.cpu);
 	}
 
 	off (component: Component) {

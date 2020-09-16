@@ -36,7 +36,7 @@ export interface CPU {
 
 export class CPU {
 	[instruction: number]: Instruction | undefined;
-	readonly bus = new BUS();
+	readonly bus = new BUS(this);
 	readonly cache = new Uint8Array(2);
 	readonly registers = new Uint8Array(8);
 	readonly unbankedMemory = new Uint8Array(128);

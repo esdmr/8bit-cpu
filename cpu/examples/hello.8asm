@@ -1,40 +1,25 @@
-bank 0:
-__hello:
-	.char "Hello, World!"
-	.char #0
+.init "Controller" 0
+.init "Printer" {"bank": 1, "addr": 0}
 
 bank swap:
-main:
-	bnk #0
-	lda #0:__hello
-	ldb #$f0
+	bnk #1
+	lda #hello
+	ldb #0
+
+_loop:
 	lxa
-
-_main_while1:
 	cpx #0
-	beq _main_2
-	cpb #0
-	bnq _main_while1_if1_end
-	ldb #$f0
-	dbg
-
-_main_while1_if1_end:
+	beq end
 	sbx
 	ina
 	inb
-	lxa
-	jmp _main_while1
+	jmp _loop
 
-_main_2:
-	ldy #0
-
-_main_while3:
-	cpb #0
-	beq _main_4
-	sby
-	inb
-	jmp _main_while3
-
-_main_4:
-	dbg
+end:
+	bnk #0
+	lda 0 ; Trigger hardware interrupt
 	brk
+
+hello:
+	.char "Hello, World!"
+	.char #0

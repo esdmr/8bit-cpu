@@ -40,7 +40,7 @@ JSONValue
 	;
 
 JSONString: String { $$ = $1; };
-JSONNumber: dec { $$ = $1; };
+JSONNumber: dec { $$ = parseInt($1, 10); };
 JSONArray: '[' JSONArrayItem ']' { $$ = $2; };
 JSONArrayItem: JSONArrayItem ',' JSONValue { $1.push($2); $$ = $1; } | { $$ = []; };
 
@@ -49,11 +49,11 @@ JSONBoolean
 	| false { $$ = false; }
 	;
 
-JSONObject: '{' JSONObjectItem '}' { $$ = $2; };
+JSONObject: '{' JSONObjectItem '}' { $$ = $2; } | '{' '}' { $$ = Object.create(null); };
 
 JSONObjectItem
-	: JSONObjectItem ',' JSONString ':' JSONValue { $1[$2] = $3; $$ = $1; }
-	| { $$ = {}; }
+	: JSONObjectItem ',' JSONString ':' JSONValue { $1[$3] = $5; $$ = $1; }
+	| JSONString ':' JSONValue { $$ = Object.create(null); $$[$1] = $3; }
 	;
 
 Instruction
@@ -68,7 +68,7 @@ Instruction
 	| dchar String { $$ = {type: 'str', value: $2}; }
 	| dfill '#' Number Char { $$ = {type: 'flf', value: [$3, $4]}; }
 	| dfill Number Char { $$ = {type: 'flt', value: [$2, $3]}; }
-	| dinit strlit JSONValue { $$ = {type: 'int', value: [$2, $3]}; }
+	| dinit String JSONValue { $$ = {type: 'int', value: [$2, $3]}; }
 	;
 
 InstructionLst: InstructionLst Instruction { $1.push($2); $$ = $1; } | { $$ = []; };

@@ -1,8 +1,11 @@
+import { CPU } from '../cpu.js';
+
 export enum RW { READ, WRITE }
 
 export abstract class Component {
 	abstract handler (opt: Component.Options): number | undefined;
 
+	onAttached (cpu: CPU) {}
 }
 
 export namespace Component {
