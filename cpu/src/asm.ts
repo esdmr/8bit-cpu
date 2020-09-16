@@ -66,128 +66,122 @@ export const instrTable = {
 	},
 } as const;
 
-export class Assembler {
-	private readonly banks = new Map<number | 'swap', BankData>();
-	private readonly inits: DirectiveInit[] = [];
-	private bankName?: number | 'swap';
-	private isCached = false;
-	private offset = 0;
+export function assemble (text: string) {
+	const state: assemble.State = {
+		banks: new Map<number | 'swap', BankData>(),
+		inits: [],
+		bankName: -1,
+		offset: 0,
+	};
 
-	private get bankData () {
-		if (this.bankName == null) throw new Error('No bank specified.');
-		return this.banks.get(this.bankName)!;
+	for (const astItem of parse(text)) {
+		assemble.parsers[astItem.type](state, astItem);
 	}
 
-	private constructor (private readonly text: string) { }
-
-	/**
-	 * Assembles given source into ArrayBuffer
-	 * @param text Assembly source to be assembled
-	 * @returns Map of BankData containing ArrayBuffer and list of labels
-	 */
-	static assemble (text: string) {
-		const assembler = new Assembler(text);
-		assembler.assemble();
-
-		return {
-			banks: assembler.banks,
-			inits: assembler.inits,
-		};
-	}
-
-	private assemble () {
-		if (this.isCached) return this.banks;
-
-		const parsers = {
-			bnk: this.bank,
-			flf: this.directiveFillFor,
-			flt: this.directiveFillTo,
-			imd: this.instruction,
-			imp: this.instruction,
-			int: this.directiveInit,
-			lbl: this.label,
-			ptr: this.instruction,
-			str: this.directiveChar,
-		};
-
-		for (const item of parse(this.text)) {
-			parsers[item.type].call(this, item as never);
-		}
-
-		for (const { bytes, buffer } of this.banks.values()) {
-			for (const [index, value] of bytes.entries()) {
-				if (Array.isArray(value)) {
-					const label = this.banks.get(value[0])?.labels[value[1]] ??
-						this.banks.get('swap')?.labels[value[1]];
-
-					if (label == null) throw new Error('Undefined label ' + value[1]);
-					bytes[index] = label;
-					buffer[index] = label;
-				} else {
-					buffer[index] = value;
-				}
+	for (const { bytes, buffer } of state.banks.values()) {
+		for (const [index, value] of bytes.entries()) {
+			if (Array.isArray(value)) {
+				const label = state.banks.get(value[0])?.labels[value[1]] ?? state.banks.get('swap')?.labels[value[1]];
+				if (label == null) throw new Error(`Undefined label ${value[1]}`);
+				bytes[index] = label;
+				buffer[index] = label;
+			} else {
+				buffer[index] = value;
 			}
 		}
-
-		this.isCached = true;
 	}
 
-	private push (value: BankData['bytes'][number]) {
-		this.bankData.bytes.push(value);
-		this.offset++;
+	return state as Pick<assemble.State, 'banks' | 'inits'>;
+}
 
-		if (this.offset > (this.bankName! === 'swap' ? 256 : 128))
-			throw new Error(`Bank ${this.bankName} is large.`);
+export namespace assemble {
+	export interface State {
+		readonly banks: Map<number | 'swap', BankData>;
+		readonly inits: DirectiveInit[];
+		bankName: number | 'swap';
+		offset: number;
 	}
 
-	private instruction (item: AnyInstruction) {
-		this.push(instrTable[item.type][item.name.toLowerCase() as never]);
+	function bankData (state: State) {
+		if (state.bankName == -1) throw new Error('No bank specified.');
+		return state.banks.get(state.bankName)!;
+	}
+
+	function push (state: State, value: BankData['bytes'][number]) {
+		bankData(state).bytes.push(value);
+		state.offset++;
+
+		if (state.offset > (state.bankName === 'swap' ? 256 : 128)) {
+			throw new Error(`Bank ${state.bankName} is large.`);
+		}
+	}
+
+	function instruction (state: State, item: ASTItem) {
+		if (['ptr', 'imp', 'imd'].includes(item.type)) return;
+
+		item = item as AnyInstruction;
+		push(state, instrTable[item.type][item.name.toLowerCase() as never]);
 
 		if (item.value != null) {
 			if (item.value.type === 'rel') {
-				item.value.value += this.offset;
+				item.value.value += state.offset;
 			} else if (item.value.type === 'lbl') {
-				item.value.value[0] ?? (item.value.value[0] = this.bankName!);
+				item.value.value[0] ?? (item.value.value[0] = state.bankName!);
 			}
 
-			this.push(item.value.value);
+			push(state, item.value.value);
 		}
 	}
 
-	private bank (item: BankSelect) {
-		const bank = Object.freeze({
-			buffer: new Uint8Array(128),
-			bytes: [],
-			labels: Object.create(null),
-		});
+	export const parsers: Record<ASTItem['type'], (state: State, item: ASTItem) => void> = {
+		bnk (state, item) {
+			if (item.type !== 'bnk') return;
 
-		this.banks.set(item.value, bank);
-		this.bankName = item.value;
-		this.offset = item.value === 'swap' ? 128 : 0;
-	}
+			const bank: BankData = Object.freeze({
+				buffer: new Uint8Array(128),
+				bytes: [],
+				labels: Object.create(null),
+			});
 
-	private directiveInit (item: DirectiveInit) {
-		this.inits.push(item);
-	}
+			state.banks.set(item.value, bank);
+			state.bankName = item.value;
+			state.offset = item.value === 'swap' ? 128 : 0;
+		},
+		flf (state, item) {
+			if (item.type !== 'flf') return;
 
-	private label (item: Label) {
-		this.bankData.labels[item.value] = this.offset;
-	}
+			for (let index = 0; index < item.value[0]; index++) {
+				push(state, item.value[1].charCodeAt(0));
+			}
+		},
+		flt (state, item) {
+			if (item.type !== 'flt') return;
 
-	private directiveChar (item: DirectiveChar) {
-		for (const char of item.value)
-			this.push(char.charCodeAt(0));
-	}
+			for (let ubdex = state.offset; ubdex <= item.value[0]; ubdex++) {
+				push(state, item.value[1].charCodeAt(0));
+			}
+		},
+		imd: instruction,
+		imp: instruction,
+		int (state, item) {
+			if (item.type !== 'int') return;
 
-	private directiveFillFor (item: DirectiveFill) {
-		for (let index = 0; index < item.value[0]; index++)
-			this.push(item.value[1].charCodeAt(0));
-	}
+			state.inits.push(item);
+		},
+		lbl (state, item) {
+			if (item.type !== 'lbl') return;
 
-	private directiveFillTo (item: DirectiveFill) {
-		for (let index = this.offset; index <= item.value[0]; index++)
-			this.push(item.value[1].charCodeAt(0));
-	}
+			bankData(state).labels[item.value] = state.offset;
+		},
+		ptr: instruction,
+		str (state, item) {
+			if (item.type !== 'str') return;
+
+			for (const char of item.value) {
+				push(state, char.charCodeAt(0));
+			}
+		},
+	};
 }
 
 /**
@@ -195,17 +189,16 @@ export class Assembler {
  */
 export type AST = ASTItem[];
 type instrTable = typeof instrTable;
-type MakeInstruction<T extends keyof instrTable> = T extends any ? Instruction<T> : never;
 type LabelReference = [number | 'swap', string];
-type AnyInstruction = MakeInstruction<keyof instrTable>;
+type AnyInstruction = keyof instrTable extends infer T ? T extends keyof instrTable ? Instruction<T> : never : never;
 
 type ASTItem
 	= AnyInstruction
 	| BankSelect
-	| DirectiveInit
-	| Label
 	| DirectiveChar
 	| DirectiveFill
+	| DirectiveInit
+	| Label
 	;
 
 export interface BankData {

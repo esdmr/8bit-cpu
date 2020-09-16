@@ -2,7 +2,7 @@ import * as util from 'util';
 import * as process from 'process';
 import * as fs from 'fs';
 import { CPU } from '../cpu.js';
-import { Assembler } from '../asm.js';
+import { assemble } from '../asm.js';
 import * as components from '../components/index.js';
 
 function main () {
@@ -18,7 +18,7 @@ function main () {
 	const shouldDebug = process.argv[4] === '--debug';
 
 	const input = fs.readFileSync(inputFile, 'utf8');
-	const { banks, inits } = Assembler.assemble(input);
+	const { banks, inits } = assemble(input);
 
 	if (outputFile === '--eval') {
 		const cpu = new CPU();
@@ -51,7 +51,24 @@ function main () {
 			}));
 		}
 	} else {
-		// return writeFileSync(require('path').normalize(outputFile), buffer);
+		const file = fs.createWriteStream(outputFile);
+
+		try {
+			for (const [bank, { buffer }] of banks.entries()) {
+				file.cork();
+
+				if (bank === 'swap') {
+					file.write('s');
+				} else {
+					file.write('b' + bank.toString(16).padStart(2, '0'));
+				}
+
+				file.write(buffer);
+				file.uncork();
+			}
+		} finally {
+			file.end();
+		}
 	}
 }
 

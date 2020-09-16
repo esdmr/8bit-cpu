@@ -30,7 +30,7 @@ Char
 	| '#' Number { $$ = String.fromCharCode($2); }
 	;
 
-String: strlit { $$ = JSON.parse($2); };
+String: strlit { $$ = JSON.parse($1); };
 
 JSONValue
 	: JSONString { $$ = $1; }
