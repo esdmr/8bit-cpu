@@ -1,6 +1,6 @@
 import { Component } from './base.js';
 
-export default class extends Component {
+export default class Controller extends Component {
 	readonly controls: Record<number, Component['handler'] | undefined> =
 		Object.create(null);
 

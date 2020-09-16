@@ -1,6 +1,6 @@
 import { Component, RW } from './base.js';
 
-export default class extends Component {
+export default class Memory extends Component {
 	bank: number;
 
 	readonly: boolean;

@@ -117,7 +117,7 @@ export namespace assemble {
 	}
 
 	function instruction (state: State, item: ASTItem) {
-		if (['ptr', 'imp', 'imd'].includes(item.type)) return;
+		if (!['ptr', 'imp', 'imd'].includes(item.type)) return;
 
 		item = item as AnyInstruction;
 		push(state, instrTable[item.type][item.name.toLowerCase() as never]);
