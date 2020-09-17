@@ -18,7 +18,6 @@ export class BUS {
 
 	on (component: Component) {
 		this.components.add(component);
-
 		component.onAttached(this.cpu);
 	}
 
@@ -30,7 +29,7 @@ export class BUS {
 		let result = 0;
 
 		for (const component of this.components) {
-			result |= component.handler(opts) ?? 0;
+			result |= component.handleBUSEvent(opts) ?? 0;
 		}
 
 		return result;

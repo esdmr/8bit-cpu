@@ -12,17 +12,16 @@ export default class Printer extends Component {
 	}
 
 	onAttached (cpu: CPU) {
-		cpu.bus.on(this.memory);
 		const component = cpu.bus.find(Controller);
 		if (component == null) throw new Error('No controller availiable');
-
+		cpu.bus.on(this.memory);
 		component.addControl(this.opts.addr, () => {
 			console.log(String.fromCharCode(...this.memory.buffer).replace(/\0$/g, ''));
 			return undefined;
 		});
 	}
 
-	handler () {
+	handleBUSEvent () {
 		return undefined;
 	}
 }

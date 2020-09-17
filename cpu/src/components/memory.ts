@@ -18,7 +18,7 @@ export default class Memory extends Component {
 		this.buffer = buffer;
 	}
 
-	handler ({
+	handleBUSEvent ({
 		addr, bp, data, rw,
 	}: Component.Options) {
 		if (bp !== this.bank) return;
