@@ -6,6 +6,7 @@ export abstract class Component {
 	abstract handleBUSEvent (opt: Component.Options): number | undefined;
 
 	onAttached (cpu: CPU) {}
+	onDetached (cpu: CPU) {}
 }
 
 export namespace Component {

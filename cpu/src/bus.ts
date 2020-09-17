@@ -23,6 +23,7 @@ export class BUS {
 
 	off (component: Component) {
 		this.components.delete(component);
+		component.onDetached(this.cpu);
 	}
 
 	emit (opts: Component.Options) {

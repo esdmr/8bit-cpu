@@ -21,6 +21,13 @@ export default class Printer extends Component {
 		});
 	}
 
+	onDetached (cpu: CPU) {
+		const component = cpu.bus.find(Controller);
+		if (component == null) throw new Error('No controller availiable');
+		cpu.bus.off(this.memory);
+		component.removeControl(this.opts.addr);
+	}
+
 	handleBUSEvent () {
 		return undefined;
 	}

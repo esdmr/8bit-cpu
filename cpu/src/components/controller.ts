@@ -10,6 +10,10 @@ export default class Controller extends Component {
 		this.controls[addr] = handler;
 	}
 
+	removeControl (addr: number) {
+		delete this.controls[addr];
+	}
+
 	handleBUSEvent (event: Component.Options) {
 		if (event.bp !== this.bank) return undefined;
 
