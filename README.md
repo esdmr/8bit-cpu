@@ -45,7 +45,7 @@ Turing-complete 8 bit cpu with custom instruction set.
 
 - Addresses `00` - `7f` are passed via bus to the components.
 - `BP` can be used to switch the component list of `00` - `7f`.
-  - This allows for a total of 8 * 7 bits of address space.
+  - This allows for a total of 8 + 7 bits of address space.
 - Along with the BUS, the CPU has 128 bytes of internal memory at `80` - `ff`.
   - This space is static and `BP` will not change its contents.
 - Any Component can be placed anywhere. To place a component, assembly `.init` or custom js/ts code can be used.
