@@ -1,4 +1,6 @@
 {
   "typescript.tsdk": "cpu/node_modules/typescript/lib",
   "eslint.enable": false,
+  "javascript.preferences.importModuleSpecifierEnding": "js",
+  "typescript.preferences.importModuleSpecifierEnding": "js",
 }

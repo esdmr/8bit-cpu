@@ -16,7 +16,15 @@ export default class Printer extends Component {
 		if (component == null) throw new Error('No controller availiable');
 		cpu.bus.on(this.memory);
 		component.addControl(this.opts.addr, () => {
-			console.log(String.fromCharCode(...this.memory.buffer).replace(/\0$/g, ''));
+			const result: string[] = [];
+
+			for (const byte of this.memory.buffer) {
+				if (byte === 0) break;
+				result.push(String.fromCharCode(byte))
+			}
+
+			console.log(result.join(''));
+
 			return undefined;
 		});
 	}
