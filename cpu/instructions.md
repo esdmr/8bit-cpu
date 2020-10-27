@@ -400,10 +400,10 @@ Compare register to immediate. `I - R -> N, Z`
 
 ## `t` imp
 
-Transfer register to register. `R1 -> R2`
+Transfer register to register. `R2 -> R1`
 | A   | B   | X   | Y   | SP  | BP  | N   | Z   | V   | C   |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| R2  | R2  | R2  | R2  | -   | -   | -   | -   | -   | -   |
+| R1  | R1  | R1  | R1  | -   | -   | -   | -   | -   | -   |
 
 ## `l` imp
 
