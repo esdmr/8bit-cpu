@@ -222,6 +222,8 @@ export class CPU {
 	@CPU.instruction(1) [0x0f] () { this.x = this.x ^ this.y; }
 	@CPU.instruction(1) [0x10] () { this.carry = false; this.addCarry(); }
 	@CPU.instruction(1) [0x11] () { this.carry = false; this.addCarry(twosNot(this.y)); }
+	@CPU.instruction(1) [0x12] () { console.warn('DBGF', { N: this.negative, Z: this.zero, V: this.overflow, C: this.carry }); }
+	@CPU.instruction(2) [0x13] () { console.warn('DBGMD', this.cache[1], this.cache[1].toString(16).padStart(2, '0')); }
 	@CPU.instruction(1) [0x14] () { this.ip = this.a; }
 	@CPU.instruction(1) [0x15] () { this.ip = this.b; }
 	@CPU.instruction(1) [0x16] () { this.ip = this.x; }
@@ -234,6 +236,10 @@ export class CPU {
 	@CPU.instruction(1) [0x1d] () { this.rotateRightCarry(); }
 	@CPU.instruction(1) [0x1e] () { this.x = this.x >> this.y % 8; }
 	@CPU.instruction(1) [0x1f] () { this.arithmeticShiftRight(); }
+	@CPU.instruction(1) [0x20] () { console.warn('DBGRA', this.a); }
+	@CPU.instruction(1) [0x21] () { console.warn('DBGRA', this.b); }
+	@CPU.instruction(1) [0x22] () { console.warn('DBGRA', this.x); }
+	@CPU.instruction(1) [0x23] () { console.warn('DBGRA', this.y); }
 	@CPU.instruction(2) [0x40] () { if (!this.negative) this.ip = this.cache[1]; }
 	@CPU.instruction(2) [0x41] () { if (!this.overflow) this.ip = this.cache[1]; }
 	@CPU.instruction(2) [0x42] () { if (!this.carry) this.ip = this.cache[1]; }
