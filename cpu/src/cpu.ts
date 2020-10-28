@@ -237,9 +237,9 @@ export class CPU {
 	@CPU.instruction(1) [0x1e] () { this.x = this.x >> this.y % 8; }
 	@CPU.instruction(1) [0x1f] () { this.arithmeticShiftRight(); }
 	@CPU.instruction(1) [0x20] () { console.warn('DBGRA', this.a); }
-	@CPU.instruction(1) [0x21] () { console.warn('DBGRA', this.b); }
-	@CPU.instruction(1) [0x22] () { console.warn('DBGRA', this.x); }
-	@CPU.instruction(1) [0x23] () { console.warn('DBGRA', this.y); }
+	@CPU.instruction(1) [0x21] () { console.warn('DBGRB', this.b); }
+	@CPU.instruction(1) [0x22] () { console.warn('DBGRX', this.x); }
+	@CPU.instruction(1) [0x23] () { console.warn('DBGRY', this.y); }
 	@CPU.instruction(2) [0x40] () { if (!this.negative) this.ip = this.cache[1]; }
 	@CPU.instruction(2) [0x41] () { if (!this.overflow) this.ip = this.cache[1]; }
 	@CPU.instruction(2) [0x42] () { if (!this.carry) this.ip = this.cache[1]; }
