@@ -8,7 +8,7 @@
     "forceConsistentCasingInFileNames": true,
     "lib": ["ES2020.String"],
     "module": "ESNext",
-    "moduleResolution": "classic",
+    "moduleResolution": "node",
     "newLine": "lf",
     "outDir": "build",
     "pretty": true,

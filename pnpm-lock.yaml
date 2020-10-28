@@ -1,6 +1,7 @@
 importers:
   cpu:
     dependencies:
+      colorette: 1.2.1
       jison: 0.4.18
     devDependencies:
       '@types/node': 14.0.27
@@ -9,6 +10,7 @@ importers:
       typescript-formatter: 7.2.2_typescript@3.9.7
     specifiers:
       '@types/node': ^14.0.27
+      colorette: ^1.2.1
       jison: ^0.4.18
       rimraf: ^3.0.2
       typescript: ^3.9.7
@@ -57,6 +59,10 @@ packages:
       node: '>= 0.3.0'
     resolution:
       integrity: sha1-5kObkHA9MS/24iJAl76pLOPQKhQ=
+  /colorette/1.2.1:
+    dev: false
+    resolution:
+      integrity: sha512-puCDz0CzydiSYOrnXpz/PKd69zRrribezjtE9yd4zvytoRc8+RY/KJPvtPFKZS3E3wP6neGyMe0vOTlHO5L3Pw==
   /colors/0.5.1:
     dev: false
     engines:

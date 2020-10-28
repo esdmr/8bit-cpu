@@ -1,9 +1,10 @@
-import * as util from 'util';
-import * as process from 'process';
 import * as fs from 'fs';
-import { CPU } from '../cpu.js';
+import * as process from 'process';
+import * as util from 'util';
 import { assemble } from '../asm.js';
 import * as components from '../components/index.js';
+import { CPU } from '../cpu.js';
+import { writeDebug } from '../debug.js';
 
 function main () {
 	if (![4, 5].includes(process.argv.length)) {
@@ -22,6 +23,8 @@ function main () {
 
 	if (outputFile === '--eval') {
 		const cpu = new CPU();
+
+		cpu.writeDebug = writeDebug;
 
 		for (const init of inits) {
 			const [name, args] = init.value;

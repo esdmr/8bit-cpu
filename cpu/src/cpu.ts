@@ -37,8 +37,9 @@ export interface CPU {
 export class CPU {
 	[instruction: number]: Instruction | undefined;
 	readonly bus = new BUS(this);
-	readonly cache = new Uint8Array(2);
-	readonly registers = new Uint8Array(8);
+	readonly registerMemory = new Uint8Array(10);
+	readonly cache = this.registerMemory.subarray(0, 2);
+	readonly registers = this.registerMemory.subarray(2, 10);
 	readonly unbankedMemory = new Uint8Array(128);
 	terminated = false;
 
@@ -58,6 +59,7 @@ export class CPU {
 				const ip = this.ip;
 				if (size > 1) this.cache[1] = this.readByte(ip + 1);
 				this.ip = ip + size;
+				this.writeDebug();
 				return func.call(this);
 			} as T;
 
@@ -130,6 +132,10 @@ export class CPU {
 		} else {
 			this.unbankedMemory[offset - 128] = value;
 		}
+	}
+
+	writeDebug () {
+		// No-Op, Modified by assembler.ts
 	}
 
 	private addCarry (y = this.y) {
